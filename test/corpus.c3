@@ -20,7 +20,7 @@ macro test($name, $input_path, $solution_path, Config config = c3fmt::default_co
     if (formatted.len != len) len = (int)min(formatted.len, len);
 
     int line = 0;
-    for (usz i = 0; i < len; ++i)
+    for (sz i = 0; i < len; ++i)
     {
         if (solution[i] != formatted[i])
         {

@@ -181,7 +181,7 @@ fn int main(String[] args)
 			char[] buffer = mem::new_array(char, 512);
 			defer free(buffer);
 
-			usz s = io::stdin().read(buffer)!!;
+			sz s = io::stdin().read(buffer)!!;
 
 			if (s == 0)
 			{
@@ -248,7 +248,7 @@ fn int main(String[] args)
 
 fn void fast_scan(String entry, FileList* files)
 {
-	if (!io::path::is_dir(io::path::temp(entry)!!))
+	if (!io::path::is_dir(io::path::tnew(entry)!!))
 	{
 		files.push(entry.copy(mem));
 		return;
@@ -263,7 +263,7 @@ fn void fast_scan(String entry, FileList* files)
 
 fn void fast_scan_recursive(DString* path_buf, FileList* files)
 {
-	usz original_len = path_buf.len();
+	sz original_len = path_buf.len();
 	String current_path = path_buf.str_view();
 
 	$if env::POSIX:
@@ -288,9 +288,9 @@ fn void fast_scan_recursive(DString* path_buf, FileList* files)
 			{
 				if (path_buf.str_view().ends_with(".c3"))
 				{
-					if (entry.d_type == posix::DT_UNKNOWN && !io::path::is_file(io::path::temp(path_buf.str_view())!!))
+					if (entry.d_type == posix::DT_UNKNOWN && !io::path::is_file(io::path::tnew(path_buf.str_view())!!))
 					{
-						if (io::path::is_dir(io::path::temp(path_buf.str_view())!!))
+						if (io::path::is_dir(io::path::tnew(path_buf.str_view())!!))
 						{
 							fast_scan_recursive(path_buf, files);
 						}
@@ -312,7 +312,7 @@ fn bool? collect_callback(io::path::Path p, bool is_dir, any data)
 	if (!p.has_extension("c3")) return false;
 
 	FileList* files = (FileList*)data;
-	files.push(p.str_view().copy(mem));
+	files.push((String)p.copy(mem));
 	return false;
 }
 

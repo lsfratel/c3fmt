@@ -13,7 +13,7 @@ struct Results
 
 fn Path? convert_path(Path input, String cwd_s, Allocator allocator)
 {
-    String in_s = input.str_view().replace(allocator, "\\", "/");
+    String in_s = (String)input.replace(allocator, "\\", "/");
 
     if (!in_s.starts_with(cwd_s)) return INVALID_PATH~;
 
@@ -28,7 +28,7 @@ fn Path? convert_path(Path input, String cwd_s, Allocator allocator)
     d.append("test/stdlib/src-formatted");
     d.append(stripped);
 
-    return path::new(allocator, d.str_view(), input.env);
+    return path::new(allocator, d.str_view());
 }
 
 struct Context
@@ -62,13 +62,13 @@ fn void stdlib_worker_task(any[] args)
             {
                 io::eprintfn("Skipping formatting: %s (%s) - copying original", path_s, excuse);
                 (void)path::mkdir(target_path.parent()!!, true);
-                (void)file::save(target_path.str_view(), input);
+                (void)file::save(target_path, input);
                 g_ctx.results.skipped.add(1);
             }
             else
             {
                 (void)path::mkdir(target_path.parent()!!, true);
-                (void)file::save(target_path.str_view(), formatted);
+                (void)file::save(target_path, formatted);
                 g_ctx.results.formatted.add(1);
             }
         };
@@ -80,7 +80,7 @@ fn bool? collect_paths(Path path, bool is_dir, any data)
     if (!is_dir)
     {
         List{String}* list = (List{String}*)data;
-        list.push(path.str_view().copy(mem));
+        list.push((String)path.copy(mem));
     }
     return false;
 }
@@ -88,11 +88,11 @@ fn bool? collect_paths(Path path, bool is_dir, any data)
 fn void format_and_compile_std_lib() @test
 {
     Path root = path::new(mem, ROOT)!!;
-    defer root.free();
+    defer root.free(mem);
 
     Path cwd = path::cwd(mem)!!;
-    defer cwd.free();
-    String cwd_s = cwd.str_view().replace(mem, "\\", "/");
+    defer cwd.free(mem);
+    String cwd_s = (String)cwd.replace(mem, "\\", "/");
     defer cwd_s.free(mem);
 
     List{String} paths;
@@ -119,7 +119,7 @@ fn void format_and_compile_std_lib() @test
     pool.init(num_threads, num_threads)!!;
     defer pool.stop_and_destroy();
 
-    for (usz i = 0; i < num_threads; i++)
+    for (int i = 0; i < num_threads; i++)
     {
         pool.push(&stdlib_worker_task)!!;
     }

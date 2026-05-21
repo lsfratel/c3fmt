@@ -65,7 +65,7 @@ fn Config? parse_from_file(String file_path) => @pool()
 
 	foreach (raw_line : lines)
 	{
-		usz comment_start_id = raw_line.index_of_char('#') ?? raw_line.len;
+		sz comment_start_id = raw_line.index_of_char('#') ?? raw_line.len;
 		String line = raw_line[:comment_start_id];
 
 		if (line == "")
@@ -90,14 +90,14 @@ fn Config? parse_from_file(String file_path) => @pool()
 			case "use_tabs":
 				conf.use_tabs = val.to_bool()!;
 			case "tab_size":
-				conf.tab_size = val.to_int()!;
+				conf.tab_size = (uint)val.to_int()!;
 			case "indent_width":
-				conf.indent_width = val.to_int()!;
+				conf.indent_width = (uint)val.to_int()!;
 
 			case "max_blank_line_between_statements":
-				conf.max_blank_line_between_statements = val.to_int()!;
+				conf.max_blank_line_between_statements = (uint)val.to_int()!;
 			case "max_line_length":
-				conf.max_line_length = val.to_int()!;
+				conf.max_line_length = (uint)val.to_int()!;
 
 			case "brace_style":
 				if (val == "ALLMAN")
