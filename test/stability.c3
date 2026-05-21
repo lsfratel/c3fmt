@@ -67,7 +67,7 @@ fn bool? collect_paths(Path path, bool is_dir, any data)
     if (!is_dir)
     {
         List{String}* list = (List{String}*)data;
-        list.push(path.str_view().copy(mem));
+        list.push((String)path.copy(mem));
     }
     return false;
 }
@@ -75,7 +75,7 @@ fn bool? collect_paths(Path path, bool is_dir, any data)
 fn void stability() @test
 {
     Path root = path::new(mem, ROOT)!!;
-    defer root.free();
+    defer root.free(mem);
 
     List{String} paths;
     paths.init(mem);
@@ -101,7 +101,7 @@ fn void stability() @test
     pool.init(num_threads, num_threads)!!;
     defer pool.stop_and_destroy();
 
-    for (usz i = 0; i < num_threads; i++)
+    for (sz i = 0; i < num_threads; i++)
     {
         pool.push(&stability_worker_task)!!;
     }

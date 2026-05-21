@@ -153,7 +153,7 @@ fn void C3Fmt.trim(&self)
 	new_buf.init(mem);
 	new_buf.push(self.buf[0]);
 
-	for (usz i = 1; i < self.buf.len(); ++i)
+	for (sz i = 1; i < self.buf.len(); ++i)
 	{
 		if (self.buf[i].kind == NEWLINE)
 		{
@@ -186,7 +186,7 @@ fn void C3Fmt.print(&self)
 {
 	self.trim();
 
-	usz token_count = self.buf.len();
+	sz token_count = self.buf.len();
 	if (token_count == 0)
 	{
 		return;
@@ -197,7 +197,7 @@ fn void C3Fmt.print(&self)
 	$endif
 
 	usz indent_level = 0;
-	usz i = 0;
+	sz i = 0;
 	while (i < token_count && (self.buf[i].kind == INDENT || self.buf[i].kind == DEDENT))
 	{
 		if (self.buf[i].kind == INDENT)
@@ -213,7 +213,7 @@ fn void C3Fmt.print(&self)
 	}
 
 	usz current_line_indent = indent_level;
-	for (usz j = i; j < token_count; ++j)
+	for (sz j = i; j < token_count; ++j)
 	{
 		switch (self.buf[j].kind)
 		{
@@ -370,7 +370,7 @@ fn void C3Fmt.print_line(&self, Token[] tokens, usz indent_level)
 
 	if (need_wrapping)
 	{
-		usz i = 0;
+		sz i = 0;
 		usz group_id = 0;
 		bool found_group = false;
 		usz next_indent_increase = 0;

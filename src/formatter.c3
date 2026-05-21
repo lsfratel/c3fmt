@@ -390,7 +390,7 @@ fn void C3Fmt.process_aligned_block(&self, TSNode parent, uint start_index, uint
 		TSNode child = ts::node_named_child(parent, i);
 		if (child.is_comment()) continue;
 
-		usz start_buf_len = self.buf.len();
+		sz start_buf_len = self.buf.len();
 
 		TSNode op = find_assignment_op(child);
 		if (!ts::node_is_null(op))
@@ -580,12 +580,12 @@ fn void C3Fmt.process_compound(&self, TSNode node)
 		if (i > 0)
 		{
 			TSNode sibling = ts::node_named_child(node, i - 1);
-			blank_line_amount = child.start_point_row()
-				- sibling.end_point_row();
+			blank_line_amount = (int)child.start_point_row()
+				- (int)sibling.end_point_row();
 		}
 		blank_line_amount = min(
 			blank_line_amount,
-			self.config.max_blank_line_between_statements + 1
+			(int)self.config.max_blank_line_between_statements + 1
 		);
 
 		for (int j = 0; j < blank_line_amount - 1; ++j)
@@ -790,7 +790,7 @@ fn void C3Fmt.process_uncanny_scope(
 )
 {
 	bool is_single_line = node.start_point_row() == node.end_point_row();
-	usz start_idx = self.buf.len();
+	sz start_idx = self.buf.len();
 
 	bool entered_scope = false;
 	uint entered_scope_id;
@@ -849,12 +849,12 @@ fn void C3Fmt.process_uncanny_scope(
 			if (i > entered_scope_id + 1)
 			{
 				TSNode sibling = ts::node_child(node, i - 1);
-				blank_line_amount = child.start_point_row()
-					- sibling.end_point_row();
+				blank_line_amount = (int)child.start_point_row()
+					- (int)sibling.end_point_row();
 			}
 			blank_line_amount = min(
 				blank_line_amount,
-				self.config.max_blank_line_between_statements + 1
+				(int)self.config.max_blank_line_between_statements + 1
 			);
 
 			for (int j = 0; j < blank_line_amount - 1; ++j)
@@ -1078,12 +1078,12 @@ fn void C3Fmt.process_asm_block_stmt(&self, TSNode node)
 			if (i > in_scope_id)
 			{
 				TSNode sibling = ts::node_child(node, i - 1);
-				blank_line_amount = child.start_point_row()
-					- sibling.end_point_row();
+				blank_line_amount = (int)child.start_point_row()
+					- (int)sibling.end_point_row();
 			}
 			blank_line_amount = min(
 				blank_line_amount,
-				self.config.max_blank_line_between_statements + 1
+				(int)self.config.max_blank_line_between_statements + 1
 			);
 
 			for (int j = 0; j < blank_line_amount - 1; ++j)
@@ -1225,12 +1225,12 @@ fn void C3Fmt.process_doc_comment(&self, TSNode node)
 			if (i > 0)
 			{
 				TSNode sibling = ts::node_named_child(node, i - 1);
-				blank_line_amount = child.start_point_row()
-					- sibling.end_point_row();
+				blank_line_amount = (int)child.start_point_row()
+					- (int)sibling.end_point_row();
 			}
 			blank_line_amount = min(
 				blank_line_amount,
-				self.config.max_blank_line_between_statements + 1
+				(int)self.config.max_blank_line_between_statements + 1
 			);
 
 			for (int j = 0; child.type() != "doc_comment_contract"
@@ -1273,12 +1273,12 @@ fn void C3Fmt.process_doc_comment(&self, TSNode node)
 	self.wrapping_enabled = true;
 }
 
-fn void C3Fmt.collapse_single_line(&self, usz start_idx)
+fn void C3Fmt.collapse_single_line(&self, sz start_idx)
 {
-	usz total_len = self.buf.len();
+	sz total_len = self.buf.len();
 	if (total_len <= start_idx) return;
 
-	for (usz i = start_idx; i < total_len; i++)
+	for (sz i = start_idx; i < total_len; i++)
 	{
 		Token t = self.buf[i];
 		if (t.kind == TokenKind.INDENT)
@@ -1292,8 +1292,8 @@ fn void C3Fmt.collapse_single_line(&self, usz start_idx)
 	}
 
 	bool last_was_space = false;
-	usz write_idx = start_idx;
-	for (usz read_idx = start_idx; read_idx < total_len; read_idx++)
+	sz write_idx = start_idx;
+	for (sz read_idx = start_idx; read_idx < total_len; read_idx++)
 	{
 		Token t = self.buf[read_idx];
 

@@ -169,7 +169,7 @@ fn int parse_long_options(String[] args, ZString option_str, LongOption[] option
 	}
 	else
 	{
-		current_argv_len = current_argv.len();
+		current_argv_len = (usz)current_argv.len();
 	}
 
 	// Since `options` is a bounded array, no need to check for a sentinel (NULL 'name' value/entry).
@@ -180,7 +180,7 @@ fn int parse_long_options(String[] args, ZString option_str, LongOption[] option
 		/* find matching long option */
 		if (current_argv.str_view()[:current_argv_len] != option.name.str_view()) continue;
 
-		if (option.name.len() == current_argv_len)
+		if ((usz)option.name.len() == current_argv_len)
 		{
 			/* exact match */
 			match = i;
@@ -547,7 +547,7 @@ macro @enable_errors() => err = 1;
 
 
 <*
- @require @in($typeof(#args), String[])
+ @require @in($Typeof(#args), String[])
 *>
 macro int? @parse(#args, ...) => @pool()
 {
@@ -573,8 +573,8 @@ macro int? @parse(#args, ...) => @pool()
 	$for var $argidx = 0, var $idx = 0; $argidx < $vaarg.len; ++$idx, $argidx += 3:
 	{ // scoped to avoid redeclarations of 'assignee' at runtime
 		// Let 'null' values converge to empty strings here.
-		String $shortname = $typeof($vaarg[$argidx]) == void* &&& $vaarg[$argidx] == null ??? "" : $vaarg[$argidx];
-		String $longname = $typeof($vaarg[$argidx + 1]) == void* &&& $vaarg[$argidx + 1] == null ??? "" : $vaarg[$argidx + 1];
+		String $shortname = $Typeof($vaarg[$argidx]) == void* &&& $vaarg[$argidx] == null ??? "" : $vaarg[$argidx];
+		String $longname = $Typeof($vaarg[$argidx + 1]) == void* &&& $vaarg[$argidx + 1] == null ??? "" : $vaarg[$argidx + 1];
 		var assignee = $vaarg[$argidx + 2];
 
 		$assert $longname.len > 0 ||| $shortname.len > 0
@@ -605,10 +605,10 @@ macro int? @parse(#args, ...) => @pool()
 
 		// The third param MUST be a pointer/reference or function type.
 		$assert @in(@kindof(assignee), TypeKind.POINTER, TypeKind.FUNC)
-			: @sprintf("Assigned parameter from args triple #%s: type `%s` is not a pointer or function type.", $idx + 1, $typeof(assignee)::name);
+			: @sprintf("Assigned parameter from args triple #%s: type `%s` is not a pointer or function type.", $idx + 1, $Typeof(assignee)::name);
 
 		OptionArgType $has_arg = NO_ARGUMENT;   // default
-		var $AssigneeInner = $typeof(assignee)::inner;
+		var $AssigneeInner = $Typeof(assignee)::inner;
 		$if @kindof(assignee) == TypeKind.FUNC ||| $AssigneeInner::kind != TypeKind.BOOL: // Only 'bool*' types represent flags, which do not have arguments.
 			$switch:
 				$case ($longname.len >= 2 &&& $longname[^1] == '?') ||| ($shortname.len >= 2 &&& $shortname[1] == '?'): $has_arg = OPTIONAL_ARGUMENT;
@@ -621,7 +621,7 @@ macro int? @parse(#args, ...) => @pool()
 			$if $has_arg == INCREMENTAL:
 				$assert $defined(*assignee) &&& $defined((*assignee)++)
 					: @sprintf("Incremental option '%s' must be a pointer to an incrementable (++ capable) type, but got '%s' instead",
-						$shortname[^1] == '+' ? $shortname : $longname, $typeof(assignee)::name);
+						$shortname[^1] == '+' ? $shortname : $longname, $Typeof(assignee)::name);
 			$endif
 
 			$if $shortname.len > 0:   // only do this when building a dynamic shortopts string
@@ -710,7 +710,7 @@ macro int? @parse(#args, ...) => @pool()
 						$case OptionArgType.CALLBACK:
 							if (null == opt::arg.ptr || !opt::arg.len) return MISSING_ARGUMENT~;   // callbacks MUST have an argument to pass
 							$assert $defined(OptionCallback z = assignee)
-								: @sprintf("Callback argument types must provide a function reference of type `OptionCallback`, but got `%s`.", $typeof(assignee)::name);
+								: @sprintf("Callback argument types must provide a function reference of type `OptionCallback`, but got `%s`.", $Typeof(assignee)::name);
 							assignee(opt::arg)!;   // invoke the callback method, bubbling up any potential fault
 
 						$default:
@@ -719,22 +719,22 @@ macro int? @parse(#args, ...) => @pool()
 								if ($ct_argstype[$idx] == OPTIONAL_ARGUMENT) break CT_SWITCH;   // optional arg? continue checking options
 								return MISSING_ARGUMENT~;   // required arg? throw
 							}
-							$assert @kindof(assignee) == TypeKind.POINTER &&& $defined($typeof(assignee)::inner)
+							$assert @kindof(assignee) == TypeKind.POINTER &&& $defined($Typeof(assignee)::inner)
 								: "The assignee value must be a pointer type and must have an '::inner' property";
 
 							// Set the passed pointer's value.
 							String arg = opt::arg;
-							var $ArgType = $typeof(assignee);
+							var $ArgType = $Typeof(assignee);
 							var $SingleDerefArgType = $ArgType::inner;
 							var $DerefArgType = $ArgType::inner;   // keep digging until the type is no longer a pointer kind
 							$for ; $DerefArgType::kind == TypeKind.POINTER; $DerefArgType = $DerefArgType::inner: $endfor
 
-							$switch $typeof(*assignee)::kind:
+							$switch $Typeof(*assignee)::kind:
 								$case ARRAY:
-									$assert $defined($typeof((*assignee)[0])) : "The ARRAY kindof arg must be indexable";
+									$assert $defined($Typeof((*assignee)[0])) : "The ARRAY kindof arg must be indexable";
 
-									$ArgType = $typeof(assignee);
-									$SingleDerefArgType = $typeof((*assignee)[0]);
+									$ArgType = $Typeof(assignee);
+									$SingleDerefArgType = $Typeof((*assignee)[0]);
 									$DerefArgType = $SingleDerefArgType;   // keep digging until the type is no longer a pointer kind
 									$for ; $DerefArgType::kind == TypeKind.POINTER; $DerefArgType = $DerefArgType::inner: $endfor
 
