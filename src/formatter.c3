@@ -1994,8 +1994,8 @@ fn void C3Fmt.process_node(
 		case "assert_stmt":
 			self.process_composite(
 				node,
-				skip_space_type: { ";", ")" },
-				skip_space_if_after: { "(" },
+				skip_space_type: { ",", ";", ")" },
+				skip_space_if_after: { "assert", "(" },
 				append_newline: true
 			);
 		case "for_stmt":
