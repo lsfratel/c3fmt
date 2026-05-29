@@ -57,9 +57,9 @@ struct Context
 faultdef CONFIG_NOT_FOUND;
 
 <*
- Walk upward from `start` (a file or directory path) looking for the nearest
- .c3fmt, parsing the first one found. Returns CONFIG_NOT_FOUND if the walk
- reaches the filesystem root without a match.
+ Walk upward from `start` looking for the nearest .c3fmt file.
+ Returns CONFIG_NOT_FOUND if the walk reaches root without a match.
+ @param start : "Current file, or directory path."
 *>
 fn Config? find_config(String start) @local => @pool()
 {
