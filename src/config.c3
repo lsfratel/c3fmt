@@ -66,7 +66,7 @@ fn Config? parse_from_file(String file_path) => @pool()
 	foreach (raw_line : lines)
 	{
 		sz comment_start_id = raw_line.index_of_char('#') ?? raw_line.len;
-		String line = raw_line[:comment_start_id];
+		String line = raw_line[:comment_start_id].trim();
 
 		if (line == "")
 		{
