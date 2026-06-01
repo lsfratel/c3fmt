@@ -39,6 +39,7 @@ struct CLIOptions
 	bool in_place;
 	bool stdout;
 	bool stdin;
+	String stdin_filepath;
 	String config;
 	bool force_default_config;
 	bool check;
@@ -51,6 +52,42 @@ struct Context
 	Config config;
 	Mutex print_mu;
 	bool has_mismatch;
+}
+
+faultdef CONFIG_NOT_FOUND;
+
+<*
+ Walk upward from `start` looking for the nearest .c3fmt file.
+ Returns CONFIG_NOT_FOUND if the walk reaches root without a match.
+ @param start : "Current file, or directory path."
+*>
+fn Config? find_config(String start) @local => @pool()
+{
+	Path dir = start.to_absolute_path(tmem)!.dirname().to_tpath()!;
+
+	while (true)
+	{
+		Path candidate = dir.tappend(".c3fmt")!;
+		if (file::exists(candidate))
+		{
+			return c3fmt::parse_from_file((String)candidate)!;
+		}
+
+		Path? parent = dir.parent();
+		if (catch parent) break;
+		dir = parent;
+	}
+
+	return CONFIG_NOT_FOUND~;
+}
+
+fn Config resolve_config_for_file(String path, Config default_config) @local
+{
+	if (cli_options.config != "" || cli_options.force_default_config)
+	{
+		return default_config;
+	}
+	return find_config(path) ?? default_config;
 }
 
 fn void format_worker(any[] args)
@@ -90,6 +127,9 @@ fn int main(String[] args)
 		"stdin",
 		&cli_options.stdin, //
 		null,
+		"stdin-filepath?",
+		&cli_options.stdin_filepath, //
+		null,
 		"stdout",
 		&cli_options.stdout, //
 		null,
@@ -116,12 +156,13 @@ fn int main(String[] args)
 				io::printfn("Options:");
 				io::printfn("\t-h, --help       - Show this help.");
 				io::printfn("\t-v, --version    - Show current version.");
-				io::printfn("\t--in-place       - Format files in place.");
-				io::printfn("\t--stdin          - Read input from stdin.");
-				io::printfn("\t--stdout         - Output result to stdout.");
-				io::printfn("\t--config=<path>  - Specify a config file.");
-				io::printfn("\t--default        - Force default config.");
-				io::printfn("\t--check          - Finish with error if files are not formatted.");
+				io::printfn("\t--in-place                  - Format files in place.");
+				io::printfn("\t--stdin                     - Read input from stdin.");
+				io::printfn("\t--stdin-filepath=<path>     - File path hint for stdin mode (used to find .c3fmt config).");
+				io::printfn("\t--stdout                    - Output result to stdout.");
+				io::printfn("\t--config=<path>             - Specify a config file.");
+				io::printfn("\t--default                   - Force default config.");
+				io::printfn("\t--check                     - Finish with error if files are not formatted.");
 				return 1;
 			default:
 				return 1;
@@ -148,20 +189,18 @@ fn int main(String[] args)
 
 		config = parsed;
 	}
-	else if (file::exists("./.c3fmt"))
+	else
 	{
-		Config? parsed = c3fmt::parse_from_file("./.c3fmt");
+		String search_dir = cli_options.stdin_filepath != "" ? cli_options.stdin_filepath : ".";
 
-		if (try parsed)
+		Config? found = find_config(search_dir);
+		if (try found)
 		{
-			config = parsed;
+			config = found;
 		}
-		else
+		else if (@catch(found) != CONFIG_NOT_FOUND)
 		{
-			io::eprintfn(
-				"Can't parse .c3fmt configuration file: %s",
-				cli_options.config
-			);
+			io::eprintfn("Can't parse .c3fmt configuration file: %s", @catch(found));
 			return 1;
 		}
 	}
@@ -239,7 +278,8 @@ fn int main(String[] args)
 
 	foreach (path : files)
 	{
-		pool.push(&format_worker, path, config, &ctx)!!;
+		Config file_config = resolve_config_for_file(path, config);
+		pool.push(&format_worker, path, file_config, &ctx)!!;
 	}
 	pool.join();
 
