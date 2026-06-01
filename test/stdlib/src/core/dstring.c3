@@ -75,11 +75,34 @@ fn void DString.replace(&self, String needle, String replacement)
 {
 	StringData* data = self.data();
 	sz needle_len = needle.len;
-	if (!data || data.len < needle_len) return;
+	if (!data)
+	{
+		if (needle_len > 0) return;
+		if (!replacement) return;
+		self.append(replacement);
+		return;
+	}
+	if (data.len < needle_len) return;
 	sz replace_len = replacement.len;
 	if (needle_len == 1 && replace_len == 1)
 	{
 		self.replace_char(needle[0], replacement[0]);
+		return;
+	}
+	if (needle_len == 0)
+	{
+		if (!replace_len) return;
+		@pool()
+		{
+			String str = self.tcopy_str();
+			self.clear();
+			self.append_string(replacement);
+			foreach (i, c : str)
+			{
+				self.append_char(c);
+				self.append_string(replacement);
+			}
+		};
 		return;
 	}
 	@pool()
@@ -322,17 +345,18 @@ fn bool DString.less(self, DString other_string)
 {
 	StringData* str1 = self.data();
 	StringData* str2 = other_string.data();
-	if (str1 == str2) return false;
-	if (!str1) return str2.len != 0;
-	if (!str2) return str1.len == 0;
+	if (str1 == str2 || !str2) return false;
+	if (!str1) return str2.len > 0;
 	sz str1_len = str1.len;
 	sz str2_len = str2.len;
-	if (str1_len != str2_len) return str1_len < str2_len;
-	for (int i = 0; i < str1_len; i++)
+	sz len = math::min(str1_len, str2_len);
+	foreach (i, s : str1.chars[:len])
 	{
-		if (str1.chars[i] >= str2.chars[i]) return false;
+		char c = str2.chars[i];
+		if (c > s) return true;
+		if (c < s) return false;
 	}
-	return true;
+	return str1_len < str2_len;
 }
 
 fn void DString.append_bytes(&self, char[] bytes)
@@ -711,6 +735,7 @@ fn sz? DString.read_from_stream(&self, InStream reader)
 		// Read into the rest of the buffer
 		sz read = reader.read(data.chars[data.len..(data.capacity - 1)])!;
 		data.len += read;
+		total_read += read;
 		// Ok, we reached the end.
 		if (read < 16) return total_read;
 		// Otherwise go another round
