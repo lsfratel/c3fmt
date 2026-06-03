@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-REF="${1:-c3-0.8}"
+REF="${1:-main}"
 REPO="https://github.com/c3lang/tree-sitter-c3"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

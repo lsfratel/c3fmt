@@ -2221,6 +2221,12 @@ fn void C3Fmt.process_node(
 		case "$stringify":
 		case "$reflect":
 			self.process_composite(node);
+		case "ct_expr":
+			self.process_composite(
+				node,
+				skip_space_type: { ")", "," },
+				skip_space_if_after: { "(" }
+			);
 
 		// Known for not working, waiting for https://github.com/c3lang/tree-sitter-c3/issues/50
 		case "const_declaration":
@@ -2237,7 +2243,7 @@ fn void C3Fmt.process_node(
 				node.start_point_row()
 			);
 			self.buf.text(node.get_text(self.source_code));
-			self.buf.newline();
+			// self.buf.newline(); // removed so we don't bork the file when we don't recognize node
 			// unreachable();
 	}
 }

@@ -8,6 +8,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  MACOSX_DEPLOYMENT_TARGET: "11.0"
+
 jobs:
   build-and-test:
     name: Build & Test (${{ matrix.os }})
@@ -49,12 +52,8 @@ jobs:
           echo "C3C_LIB=$PWD/c3/lib" >> $GITHUB_ENV
           echo "$PWD/c3" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Install lld (macOS)
-        if: runner.os == 'macOS'
-        run: brew install lld
-
-      - name: Install tree-sitter
-        uses: lmichaudel/ts-setup-action@master
+      - name: Set up tree-sitter
+        uses: tree-sitter/setup-action@v2
         with:
           install-lib: true
           install-cli: false
