@@ -647,7 +647,8 @@ fn void C3Fmt.process_composite(
 	bool append_newline = false,
 	AddWrapPointFn add_wrap_point_fn = null,
 	usz group_id = 0,
-	bool respect_input_newlines = false
+	bool respect_input_newlines = false,
+	String[] skip_child_type = {}
 )
 {
 	bool found_inline = false;
@@ -655,6 +656,11 @@ fn void C3Fmt.process_composite(
 	{
 		TSNode child = ts::node_child(node, i);
 		String type = child.type();
+
+		if (skip_child_type.contains(type))
+		{
+			continue;
+		}
 
 		String prev_type = i > 0 ? ts::node_child(node, i - 1).type() : "";
 
@@ -2038,22 +2044,73 @@ fn void C3Fmt.process_node(
 		case "do_stmt":
 			self.process_composite(node, append_newline: true);
 		case "if_stmt":
-			TSNode body = node.get_child_with_field("body");
-			TSNode parent = ts::node_parent(node);
-			self.process_composite(
-				node,
-				append_newline: body.type() == "compound_stmt"
-					&& !node.has_child_of_type("else_part")
-			);
-		case "else_part":
-			if (self.config.else_on_newline && self.config.brace_style != K_AND_R)
+			if (ts::node_parent(node).type() == "else_part") break;
+			TSNode curr = node;
+			while (true)
 			{
-				self.buf.newline();
+				TSNode body = curr.get_child_with_field("body");
+				TSNode else_part = {};
+				for (uint i = 0; i < ts::node_child_count(curr); ++i)
+				{
+					TSNode child = ts::node_child(curr, i);
+					if (child.type() == "else_part")
+					{
+						else_part = child;
+						break;
+					}
+				}
+				if (ts::node_is_null(else_part))
+				{
+					self.process_composite(
+						curr,
+						append_newline: body.type() == "compound_stmt"
+					);
+					break;
+				}
+				self.process_composite(
+					curr,
+					skip_child_type: { "else_part" }
+				);
+				if (self.config.else_on_newline && self.config.brace_style != K_AND_R)
+				{
+					self.buf.newline();
+				}
+				else
+				{
+					self.buf.space();
+				}
+
+				TSNode next_if = {};
+				for (uint i = 0; i < ts::node_child_count(else_part); ++i)
+				{
+					TSNode child = ts::node_child(else_part, i);
+					if (child.type() == "if_stmt")
+					{
+						next_if = child;
+						break;
+					}
+				}
+				if (!ts::node_is_null(next_if))
+				{
+					self.process_composite(
+						else_part,
+						skip_child_type: { "if_stmt" }
+					);
+					self.buf.space();
+					curr = next_if;
+				}
+				else
+				{
+					self.process_composite(
+						else_part,
+						append_newline: true
+					);
+					break;
+				}
 			}
-			self.process_composite(
-				node,
-				append_newline: !node.has_child_of_type("if_stmt")
-			);
+		case "else_part":
+			// Processed by "if_stmt" case
+			break;
 		case "switch_stmt":
 			self.process_composite(
 				node,

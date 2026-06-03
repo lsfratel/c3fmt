@@ -97,3 +97,9 @@ fn void comment_indent() @test {
     conf.align_comments = true;
     test("comment_indent", "test/corpus/comment_indent.c3", "test/corpus/comment_indent_f.c3", conf);
 }
+
+fn void deep_else_if() @test {
+    Config conf = c3fmt::default_config();
+    conf.align_comments = true;
+    test("deep_else_if", "test/corpus/deep_else_if.c3", "test/corpus/deep_else_if_f.c3", conf);
+}
