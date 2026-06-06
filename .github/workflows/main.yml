@@ -52,35 +52,36 @@ jobs:
           esac
           echo "$PWD/c3" >> $GITHUB_PATH
 
-      - name: Set up tree-sitter
-        uses: tree-sitter/setup-action@v2
-        with:
-          install-lib: true
-          install-cli: false
+      - name: Build tree-sitter static library
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get install -y musl-tools musl-dev cmake
+          fi
+          bash scripts/build_tree_sitter_static.sh
 
       - name: Run tests
-        run: c3c test --test-show-output -L "${{ runner.tool_cache }}/tree-sitter/lib/lib"
+        run: c3c test -vv --test-show-output
 
       - name: Compile formatted standard library
         working-directory: test/stdlib
-        run: c3c build
+        run: c3c build -vv
 
       - name: Setup static build (Linux)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get install -y musl-tools musl-dev cmake
-          c3c build build-ts-lib --trust=full
           MUSL_PATH=$(find /usr/lib -maxdepth 3 -name 'crt1.o' -path '*musl*' | head -1 | xargs dirname)
           sed -i "s|/usr/lib/musl/lib|$MUSL_PATH|g" project.json
 
       - name: Build c3fmt
         run: |
           if [[ "$RUNNER_OS" == "Linux" ]]; then
-            c3c build c3fmt-static
-            build/c3fmt c3/lib/std/collections/ > /dev/null
+            c3c build c3fmt-static -vv
+          elif [[ "$RUNNER_OS" == "Windows" ]]; then
+            c3c build c3fmt -vv -O3 -g0 --wincrt=static
           else
-            c3c build c3fmt -L "${{ runner.tool_cache }}/tree-sitter/lib/lib"
+            c3c build c3fmt -vv -O3 -g0
           fi
+          build/c3fmt c3/lib/std/collections/ > /dev/null
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6

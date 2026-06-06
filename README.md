@@ -51,35 +51,47 @@ You can look at [.c3fmt](.c3fmt) for the default configuration.
 | `align_comments` | Align trailing comments in consecutive lines. | `true` |
 ## Building
 
-Building requires the [C3 compiler](https://c3-lang.org/) and the [tree-sitter](https://github.com/tree-sitter/tree-sitter) SDK library. For instructions on how to build and install the tree-sitter library, refer to the [tree-sitter getting started guide](https://tree-sitter.github.io/tree-sitter/using-parsers/1-getting-started.html).
+Building requires the [C3 compiler](https://c3-lang.org/) and the [tree-sitter](https://github.com/tree-sitter/tree-sitter) SDK library. You can either use a globally installed tree-sitter library, or build a local copy easily using the project's build scripts.
 
-To build the executable:
+### 1. (Recommended) Building with a local tree-sitter library
+
+To avoid installing tree-sitter globally, you can clone and build a local static library directly using our helper script (requires `git`, `cmake`, and a C compiler, running inside a Bash-compatible environment like Linux, macOS, or Git Bash on Windows):
+
+```bash
+# 1. Build the local tree-sitter library (outputs to build/ts-lib/lib)
+c3c build tree-sitter --trust=full
+
+# 2. Build c3fmt (it will automatically find and link the local library)
+c3c build
+```
+
+### 2. Building with a globally installed tree-sitter library
+
+If you already have `tree-sitter` installed globally on your system, you can build the executable directly:
+
 ```bash
 c3c build
 ```
 
-If the `tree-sitter` library is not in your system's default search path, you can specify the path using the `-L` flag:
+If the library is not in your system's default search path, specify it using the `-L` flag:
 
 ```bash
 c3c build -L /path/to/tree-sitter/lib
 ```
 
-The binary will be located in `build/c3fmt`.
+The compiled binary will be located in `build/c3fmt`.
 
-### Building Statically
+### Building Statically (Linux with musl)
 
-You can build a fully static version of `c3fmt` (which is useful for standalone distribution) without needing `libtree-sitter` installed globally on your system.
+To build a fully static version of `c3fmt` linked against musl (useful for standalone Linux distribution):
 
-First, build the static `tree-sitter` library:
 ```bash
-c3c build build-ts-lib --trust=full
-```
+# 1. Build local tree-sitter
+c3c build tree-sitter --trust=full
 
-Then compile the static `c3fmt` binary:
-```bash
+# 2. Build the static binary
 c3c build c3fmt-static
 ```
-The resulting static executable will be located in `build/c3fmt`.
 
 ### Updating Sources
 
