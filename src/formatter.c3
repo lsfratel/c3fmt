@@ -556,6 +556,11 @@ fn void C3Fmt.process_aligned_block(&self, TSNode parent, uint start_index, uint
 			}
 		}
 
+		if (child.is_comment())
+		{
+			self.buf.gobble_last_newline();
+		}
+
 		self.buf.push(token::newline());
 		i++;
 	}
