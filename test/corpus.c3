@@ -103,3 +103,7 @@ fn void deep_else_if() @test {
     conf.align_comments = true;
     test("deep_else_if", "test/corpus/deep_else_if.c3", "test/corpus/deep_else_if_f.c3", conf);
 }
+
+fn void disable() @test {
+    test("disable", "test/corpus/disable.c3", "test/corpus/disable_f.c3");
+}

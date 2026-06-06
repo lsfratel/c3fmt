@@ -20,6 +20,9 @@ struct C3Fmt
 	TokenBuffer buf;
 	DString dstr_buf;
 	uint indent_level;
+
+	usz disabled_start_byte;
+	sz disabled_start_buf_len;
 }
 
 fn C3Fmt? new(String source_code, Config config)
@@ -34,6 +37,8 @@ fn C3Fmt? new(String source_code, Config config)
 	instance.buf.init(mem);
 	instance.dstr_buf.init(mem);
 	instance.indent_level = 0;
+	instance.disabled_start_byte = 0;
+	instance.disabled_start_buf_len = 0;
 
 	return instance;
 }
@@ -109,6 +114,59 @@ fn usz C3Fmt.current_column(&self)
 	return col;
 }
 
+fn void C3Fmt.check_directive(&self, String comment, TSNode node)
+{
+	if (comment == "c3fmt on" && !self.formatter_enabled)
+	{
+		// must keep indent/dedent tokens
+		TokenBuffer structural_tokens;
+		structural_tokens.init(mem);
+		defer structural_tokens.free();
+
+		for (sz i = self.disabled_start_buf_len; i < self.buf.len(); i++)
+		{
+			Token tok = self.buf[i];
+			if (tok.kind == TokenKind.INDENT || tok.kind == TokenKind.DEDENT)
+			{
+				structural_tokens.push(tok);
+			}
+		}
+
+		while (self.buf.len() > self.disabled_start_buf_len)
+		{
+			(void)self.buf.pop();
+		}
+
+		usz start = self.disabled_start_byte;
+		usz end = node.start_byte();
+		if (start <= end && end <= self.source_code.len)
+		{
+			String raw_text = self.source_code[start : end - start];
+
+			raw_text = raw_text.trim_right();
+			if (raw_text != "") self.buf.text(raw_text);
+			
+			self.buf.newline();
+			foreach (tok : structural_tokens)
+			{
+				self.buf.push(tok);
+			}
+		}
+
+		self.formatter_enabled = true;
+	}
+}
+
+fn void C3Fmt.check_directive_after(&self, String comment, TSNode node)
+{
+	if (comment == "c3fmt off" && self.formatter_enabled)
+	{
+		self.formatter_enabled = false;
+		self.disabled_start_byte = node.end_byte();
+		self.disabled_start_buf_len = self.buf.len();
+	}
+}
+
 faultdef SOURCE_CODE_CONTAINS_ERROR;
 faultdef CODE_SEMANTIC_MISMATCH;
 
@@ -126,6 +184,45 @@ fn void? C3Fmt.format(&self, bool check = false)
 	}
 
 	self.process_node(root);
+	// if c3fmt off was forgotten
+	if (!self.formatter_enabled)
+	{
+		TokenBuffer structural_tokens;
+		structural_tokens.init(mem);
+		defer structural_tokens.free();
+
+		for (sz i = self.disabled_start_buf_len; i < self.buf.len(); i++)
+		{
+			Token tok = self.buf[i];
+			if (tok.kind == TokenKind.INDENT || tok.kind == TokenKind.DEDENT)
+			{
+				structural_tokens.push(tok);
+			}
+		}
+
+		while (self.buf.len() > self.disabled_start_buf_len)
+		{
+			(void)self.buf.pop();
+		}
+
+		usz start = self.disabled_start_byte;
+		usz end = root.end_byte();
+		if (start <= end && end <= self.source_code.len)
+		{
+			String raw_text = self.source_code[start : end - start];
+			
+			raw_text = raw_text.trim_right();
+			if (raw_text != "") self.buf.text(raw_text);
+			
+			self.buf.newline();
+			foreach (tok : structural_tokens)
+			{
+				self.buf.push(tok);
+			}
+		}
+		self.formatter_enabled = true;
+	}
+
 	self.buf.eof();
 
 	self.print();
@@ -706,7 +803,10 @@ fn void C3Fmt.process_composite(
 			}
 			if (child.type() == "line_comment")
 			{
-				self.buf.inline_comment(self.extract_comment_string(child));
+				String comment_str = self.extract_comment_string(child);
+				self.check_directive(comment_str, child);
+				self.buf.inline_comment(comment_str);
+				self.check_directive_after(comment_str, child);
 				found_inline = true;
 			}
 		}
@@ -1047,7 +1147,10 @@ fn void C3Fmt.process_asm_block_stmt(&self, TSNode node)
 						io::eprintfn("Found an inline comment as last child?");
 						unreachable();
 					}
-					self.buf.inline_comment(self.extract_comment_string(child));
+					String comment_str = self.extract_comment_string(child);
+					self.check_directive(comment_str, child);
+					self.buf.inline_comment(comment_str);
+					self.check_directive_after(comment_str, child);
 				}
 			}
 			else
@@ -1162,21 +1265,16 @@ fn void C3Fmt.process_comment(&self, TSNode node, bool is_trailing = false)
 *>
 fn void C3Fmt.process_block_comment(&self, TSNode node)
 {
+	String comment = self.extract_comment_string(node);
+	self.check_directive(comment, node);
+
 	self.buf.text("/*");
 	self.buf.space();
-	String comment = self.extract_comment_string(node);
 	self.buf.text(comment);
 	self.buf.space();
 	self.buf.text("*/");
 
-	if (comment == "c3fmt on")
-	{
-		self.formatter_enabled = true;
-	}
-	if (comment == "c3fmt off")
-	{
-		self.formatter_enabled = false;
-	}
+	self.check_directive_after(comment, node);
 }
 
 <*
@@ -1185,24 +1283,20 @@ fn void C3Fmt.process_block_comment(&self, TSNode node)
 *>
 fn void C3Fmt.process_line_comment(&self, TSNode node, bool is_trailing = false)
 {
-	self.buf.text(node.get_text(self.source_code)[0:2]);
 	// Trailing comments (on same line as code): normalize to single space.
 	// Standalone comments (own line): preserve internal indentation after the separator space.
 	String body = is_trailing
 		? self.extract_comment_string(node)
 		: node.get_text(self.source_code)[2..].strip_prefix(" ").trim_right();
+	String comment = body.trim();
+	
+	self.check_directive(comment, node);
+
+	self.buf.text(node.get_text(self.source_code)[0:2]);
 	self.buf.space();
 	self.buf.text(body);
-	String comment = body.trim();
 
-	if (comment == "c3fmt on")
-	{
-		self.formatter_enabled = true;
-	}
-	if (comment == "c3fmt off")
-	{
-		self.formatter_enabled = false;
-	}
+	self.check_directive_after(comment, node);
 }
 <*
  Pretty print a doc comment.
@@ -1667,7 +1761,10 @@ fn void C3Fmt.process_node(
 
 				if (child.is_comment())
 				{
-					self.buf.inline_comment(self.extract_comment_string(child));
+					String comment_str = self.extract_comment_string(child);
+					self.check_directive(comment_str, child);
+					self.buf.inline_comment(comment_str);
+					self.check_directive_after(comment_str, child);
 				}
 				else if (ts::node_is_named(child))
 				{
