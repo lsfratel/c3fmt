@@ -30,6 +30,15 @@ Options:
 --check          - Finish with error if files are not formatted.
 ```
 
+### Ignoring sections
+Use comments to prevent the formatter from modifying a block of code:
+```c3
+// c3fmt off
+int x = 3;
+bool y = false;
+// c3fmt on
+```
+
 ## Configuration
 
 `c3fmt` will try to find a `.c3fmt` configuration file inside the working directory. You can also pass your own path to `c3fmt` using the `--config` flag, or force the default configuration with `--default`.
@@ -49,6 +58,7 @@ You can look at [.c3fmt](.c3fmt) for the default configuration.
 | `else_on_newline` | Whether to put `else` on a new line. | `true` |
 | `align_assignments` | Align `=` and `=>` in consecutive declarations/assignments. | `true` |
 | `align_comments` | Align trailing comments in consecutive lines. | `true` |
+
 ## Building
 
 Building requires the [C3 compiler](https://c3-lang.org/) and the [tree-sitter](https://github.com/tree-sitter/tree-sitter) SDK library. You can either use a globally installed tree-sitter library, or build a local copy easily using the project's build scripts.
