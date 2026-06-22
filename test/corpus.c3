@@ -74,6 +74,10 @@ fn void alignment() @test {
     test("alignment", "test/corpus/alignment.c3", "test/corpus/alignment_f.c3", conf);
 }
 
+fn void alignment_wrap_stability() @test {
+    test("alignment_wrap_stability", "test/corpus/alignment_wrap_stability.c3", "test/corpus/alignment_wrap_stability_f.c3");
+}
+
 fn void newline_at_eof() @test {
     String input = "fn void main() {}";
 

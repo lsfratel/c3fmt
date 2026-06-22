@@ -502,6 +502,17 @@ fn void C3Fmt.process_assignment_left(&self, TSNode target, TSNode op)
 	}
 }
 
+fn void C3Fmt.process_alignment_probe_node(&self, TSNode child)
+{
+	if (child.type() == "declaration_stmt" || child.type() == "global_declaration")
+	{
+		self.process_composite(child, append_newline: false);
+		return;
+	}
+
+	self.process_node(child, false);
+}
+
 fn void C3Fmt.process_aligned_block(&self, TSNode parent, uint start_index, uint end_index)
 {
 	usz max_op_col = 0;
@@ -529,15 +540,7 @@ fn void C3Fmt.process_aligned_block(&self, TSNode parent, uint start_index, uint
 		// Reset and format whole node without trailing newline to find comment col
 		while (self.buf.len() > start_buf_len) (void)self.pop_token();
 
-		if (child.type() == "declaration_stmt" || child.type() == "global_declaration")
-		{
-			// We need to NOT append newline here
-			self.process_composite(child, append_newline: false);
-		}
-		else
-		{
-			self.process_node(child, false);
-		}
+		self.process_alignment_probe_node(child);
 
 		if (i + 1 < named_child_count)
 		{
@@ -550,6 +553,41 @@ fn void C3Fmt.process_aligned_block(&self, TSNode parent, uint start_index, uint
 
 		while (self.buf.len() > start_buf_len) {
 			(void)self.pop_token();
+		}
+	}
+
+	if (self.config.max_line_length > 0 && max_op_col > 0)
+	{
+		for (uint i = start_index; i < end_index; ++i)
+		{
+			TSNode child = ts::node_named_child(parent, i);
+			if (child.is_comment()) continue;
+
+			sz start_buf_len = self.buf.len();
+			TSNode op = find_assignment_op(child);
+			if (ts::node_is_null(op)) continue;
+
+			TSNode target = declaration_target(child);
+			TSNode right = (target.type() == "macro_declaration" || !target.has_child_with_field("right"))
+				? (TSNode){}
+				: target.get_child_with_field("right");
+			if (ts::node_is_null(right) || right.type() != "call_expr") continue;
+
+			self.process_assignment_left(target, op);
+			usz op_col = self.current_column();
+			while (self.buf.len() > start_buf_len) (void)self.pop_token();
+
+			self.process_alignment_probe_node(child);
+			usz line_col = self.current_column();
+			while (self.buf.len() > start_buf_len) (void)self.pop_token();
+
+			if (max_op_col > op_col
+				&& line_col <= self.config.max_line_length
+				&& line_col + (max_op_col - op_col) > self.config.max_line_length)
+			{
+				max_op_col = 0;
+				break;
+			}
 		}
 	}
 
